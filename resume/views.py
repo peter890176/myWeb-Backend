@@ -15,8 +15,8 @@ def resume(request):
 
     data = {
         "name": "Yue Wen Peter Li",
-        "job": "Computer Science Graduate Student",
-        "about": "Born in Seattle, raised in Taiwan, and currently based in Boston. A programmer who loves coffee, cats, memes, and trading.",
+        "job": "Full-Stack Developer (Front-End focus)",
+        "about": "Dream driven developer. Born in Seattle, raised in Taiwan, studied Computer Science at Northeastern University in Boston. A programmer who loves coffee, cats, memes, and trading.",
         "email": "li.yuew@northeastern.edu",
         "linkedin": "https://www.linkedin.com/in/peter-li-97081429a/",
         "github": "https://github.com/peter890176",
