@@ -127,8 +127,7 @@ def resume(request):
                 "institution": "Northeastern University, Boston, MA",
                 "department": "Khoury College of Computer Sciences",
                 "degree": "Master of Science in Computer Science (General track)",
-                "period": "Sep 2023 - Present",
-                "expected": "Expected graduation: April 2025",
+                "period": "Sep 2023 - Apr 2025",
                 "gpa": "GPA: 3.8/4.0",
             },
             {
