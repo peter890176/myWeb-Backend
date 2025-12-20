@@ -12,10 +12,15 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env in the backend root (myWeb-Backend/.env)
+load_dotenv(BASE_DIR / ".env")
 
 
 # Static files configuration
@@ -29,20 +34,31 @@ STATICFILES_DIRS = [
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-zviu59rj!ijip73_a0bo#jss4df8@o08^h9k4gq)l^r44y2a=k'
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() == "true"
 
-SECURE_SSL_REDIRECT = False
-SESSION_COOKIE_SECURE = True  
-CSRF_COOKIE_SECURE = True  
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    raise ImproperlyConfigured(
+        "DJANGO_SECRET_KEY must be set (e.g. in myWeb-Backend/.env)."
+    )
 
-ALLOWED_HOSTS = ['myweb-peterli.up.railway.app',
-                'myweb-peterli-test.up.railway.app',
-                'localhost',
-                '127.0.0.1',
+# HTTPS / Cookie
+if DEBUG:
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+else:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+ALLOWED_HOSTS = [
+    host.strip() for host in os.getenv(
+        "DJANGO_ALLOWED_HOSTS",
+        "myweb-peterli.up.railway.app,myweb-peterli-test.up.railway.app,localhost,127.0.0.1"
+    ).split(",") if host.strip()
 ]
 
 
@@ -73,9 +89,10 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "https://myweb-peterli.netlify.app",
-    
+    origin.strip() for origin in os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:3000,https://myweb-peterli.netlify.app"
+    ).split(",") if origin.strip()
 ]
 
 ROOT_URLCONF = 'api.urls'
@@ -105,7 +122,7 @@ WSGI_APPLICATION = 'api.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': os.getenv('SQLITE_PATH', BASE_DIR / 'db.sqlite3'),
     }
 }
 
