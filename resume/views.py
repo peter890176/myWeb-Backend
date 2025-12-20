@@ -144,15 +144,47 @@ def resume(request):
             },
         ],
         "skills": [
-            "Python",
+            # Frontend
             "React",
-            "JavaScript",
+            "Next.js",
             "TypeScript",
+            "JavaScript",
             "HTML",
             "CSS",
+            "Tailwind CSS",
+            "Material-UI",
+            "Radix UI",
+
+            # Backend & APIs
+            "Node.js",
+            "Express.js",
+            "Django",
+            "Django REST Framework (DRF)",
+            "Flask",
+
+            # Languages & Databases
+            "Python",
             "Java",
-            "Django (DRF)",
-            "MYSQL",
+            "MongoDB",
+            "MySQL",
+
+            # AI / Search
+            "RAG",
+            "FAISS",
+            "Sentence Transformers",
+            "Semantic Search",
+
+            # Cloud & DevOps
+            "AWS Lambda",
+            "AWS S3",
+            "Docker",
+            "Netlify",
+            "Railway",
+
+            # Testing & Quality
+            "Jest",
+            "Cypress",
+            "ESLint",
         ],
         "cvPdf": "/documents/cv.pdf",
     }
