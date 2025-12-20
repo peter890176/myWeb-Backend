@@ -1,9 +1,164 @@
+import requests
+from django.db.models import Count, Sum
 from django.shortcuts import render
 
 # Create your views here.
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+
+from .models import Visitor
+
+
+def _get_client_ip(request):
+    """
+    從 request 取得使用者 IP，優先使用 HTTP_X_FORWARDED_FOR（經過 Proxy/CDN 時）。
+    """
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+    if x_forwarded_for:
+        # 可能會是 "ip1, ip2, ip3"，取第一個即可
+        ip = x_forwarded_for.split(",")[0].strip()
+    else:
+        ip = request.META.get("REMOTE_ADDR")
+    return ip
+
+
+def _lookup_country(ip_address: str):
+    """
+    透過公開的 IP geolocation API 查詢國家資訊。
+    這裡使用 http://ip-api.com，個人專案足夠，如需更穩定可改成付費服務。
+    """
+    if not ip_address:
+        return None, None
+
+    try:
+        resp = requests.get(
+            f"http://ip-api.com/json/{ip_address}?fields=status,country,countryCode",
+            timeout=2,
+        )
+        data = resp.json()
+        if data.get("status") == "success":
+            return data.get("country"), data.get("countryCode")
+    except Exception:
+        # 查詢失敗就不要擋住主流程
+        pass
+    return None, None
+
+
+@api_view(["POST"])
+def track_visit(request):
+    """
+    記錄一次造訪：
+    - 透過前端送來的 visitor_id 做「去重複」
+    - 依 IP 反查國家
+    - 將該 visitor 的 visit_count +1
+
+    Request JSON:
+    {
+        "visitor_id": "<瀏覽器中的隨機 ID>"
+    }
+
+    Response JSON 範例：
+    {
+        "created": true,
+        "visitor_id": "...",
+        "visit_count": 1,
+        "country": "Taiwan",
+        "country_code": "TW"
+    }
+    """
+    visitor_id = (request.data.get("visitor_id") or "").strip()
+    if not visitor_id or len(visitor_id) > 64:
+        return Response(
+            {"detail": "Invalid visitor_id"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    ip_address = _get_client_ip(request)
+    user_agent = request.META.get("HTTP_USER_AGENT", "")
+
+    visitor, created = Visitor.objects.get_or_create(
+        visitor_id=visitor_id,
+        defaults={
+            "ip_address": ip_address,
+            "user_agent": user_agent,
+        },
+    )
+
+    # 如有需要可以更新 IP / UA（使用者可能換裝置或網路）
+    updated = False
+    if not created:
+        if ip_address and visitor.ip_address != ip_address:
+            visitor.ip_address = ip_address
+            updated = True
+        if user_agent and visitor.user_agent != user_agent:
+            visitor.user_agent = user_agent
+            updated = True
+
+    # 若尚未有國家資訊且有 IP，就查一次
+    if ip_address and not visitor.country:
+        country, country_code = _lookup_country(ip_address)
+        if country or country_code:
+            visitor.country = country
+            visitor.country_code = country_code
+            updated = True
+
+    # 更新造訪次數
+    visitor.visit_count = (visitor.visit_count or 0) + 1
+
+    if created or updated:
+        visitor.save()
+    else:
+        # 只改了 visit_count 也要存
+        visitor.save(update_fields=["visit_count", "last_seen"])
+
+    return Response(
+        {
+            "created": created,
+            "visitor_id": visitor.visitor_id,
+            "visit_count": visitor.visit_count,
+            "country": visitor.country,
+            "country_code": visitor.country_code,
+        }
+    )
+
+
+@api_view(["GET"])
+def visit_stats(request):
+    """
+    回傳整體統計資訊：
+    - total_pageviews：所有訪客累計造訪次數總和
+    - unique_visitors：去重複後的訪客數（以 visitor_id 為單位）
+    - by_country：依國家分組的統計（每國 unique_visitors 與 pageviews）
+    """
+    agg = Visitor.objects.aggregate(total_pageviews=Sum("visit_count"))
+    total_pageviews = agg["total_pageviews"] or 0
+    unique_visitors = Visitor.objects.count()
+
+    country_rows = (
+        Visitor.objects.values("country", "country_code")
+        .annotate(
+            unique_visitors=Count("id"),
+            pageviews=Sum("visit_count"),
+        )
+        .order_by("-pageviews")
+    )
+
+    return Response(
+        {
+            "total_pageviews": total_pageviews,
+            "unique_visitors": unique_visitors,
+            "by_country": [
+                {
+                    "country": row["country"] or "Unknown",
+                    "country_code": row["country_code"] or "",
+                    "unique_visitors": row["unique_visitors"],
+                    "pageviews": row["pageviews"],
+                }
+                for row in country_rows
+            ],
+        }
+    )
 
 
 @api_view(["GET"])

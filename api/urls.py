@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from resume.views import resume, project_detail
+from resume.views import resume, project_detail, track_visit, visit_stats
 from django.views.generic import RedirectView
 
 from django.conf import settings
@@ -27,6 +27,8 @@ urlpatterns = [
     path('api/persona/', include('persona.urls')),
     path('api/resume/', resume, name='resume'),
     path('api/project/<int:id>/', project_detail, name='project_detail'),
+    path('api/track-visit/', track_visit, name='track_visit'),
+    path('api/visit-stats/', visit_stats, name='visit_stats'),
     path('', RedirectView.as_view(url='/api/resume/'), name='home'),
 ]
 
