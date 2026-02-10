@@ -19,9 +19,6 @@ RUN apt-get update \
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Make sure whitenoise is installed for static files
-RUN pip install whitenoise
-
 # Copy the project code into the container
 COPY . .
 
@@ -29,11 +26,9 @@ COPY . .
 RUN mkdir -p static/images
 RUN mkdir -p staticfiles
 
-# Copy your static files into the container (if they're not already in the repo)
-# COPY path/to/your/local/images/* /app/static/images/
-
 # Collect static files
-RUN python manage.py collectstatic --noinput
+
+RUN DJANGO_SECRET_KEY=dummy-build-key python manage.py collectstatic --noinput
 
 # Expose port
 EXPOSE 8000
